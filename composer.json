@@ -1,0 +1,29 @@
+{
+    "name": "noogic/laravel-builder",
+    "description": "Builder on top of factory to create entities in laravel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Joan Morell",
+            "email": "noogic@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.1.3",
+        "illuminate/support": "^5.7",
+        "illuminate/config": "^5.7",
+        "illuminate/database": "^5.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "Noogic\\Builder\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Noogic\\Builder\\BuilderServiceProvider"
+            ]
+        }
+    }
+}
