@@ -44,6 +44,11 @@ abstract class BaseBuilder
             ;
     }
 
+    public function entities()
+    {
+        return $this->entities;
+    }
+
     protected function build($class, $data, $quantity = 1)
     {
         $defaultFactory = config('builder.factory');
@@ -68,7 +73,7 @@ abstract class BaseBuilder
             $builderName = $this->getBuilderNameFromClass($class);
             $builder = class_exists($builderName) ? $builderName : null;
 
-            $this->data[$key] = $this->factory->build($class, [], 1, $builder)->id;
+            $this->data[$key] = $this->factory->build($class, [], 1, $builder)->first()->id;
         }
     }
 

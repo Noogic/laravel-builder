@@ -2,15 +2,19 @@
 
 namespace Noogic\Builder;
 
+use Illuminate\Support\Collection;
+
 class Factory
 {
     public function build($class, $data = [], $quantity = 1, $builder = null)
     {
-        return $this->withCallable($builder, $class, $data, $quantity)
+        $instances = $this->withCallable($builder, $class, $data, $quantity)
             ?? $this->withBaseBuilder($builder, $data, $quantity)
             ?? $this->withDefault($class, $data, $quantity)
-            ?? factory($class)->create($data, $quantity)
-            ;
+            ?? factory($class, $quantity)->create($data)
+        ;
+
+        return is_a($instances, Collection::class) ? $instances : new Collection([$instances]);
     }
 
 
@@ -26,7 +30,7 @@ class Factory
     protected function withBaseBuilder($builder, $data, $quantity)
     {
         if($this->isBaseBuilder($builder)) {
-            return $builder::create($data, $quantity)->get();
+            return $builder::create($data, $quantity)->entities();
         }
 
         return null;
