@@ -77,6 +77,29 @@ abstract class BaseBuilder
         }
     }
 
+    protected function associate(Model $model, $relation = null)
+    {
+        $method = $relation ?: strtolower(substr(strrchr(get_class($model), '\\'), 1));
+
+        foreach ($this->entities as $entity) {
+            $entity->{$method}()->associate($model)->save();
+        }
+
+        return $this;
+    }
+
+    protected function addMany(Collection $collection, $relation = null)
+    {
+        $model = $collection->first();
+        $method = $relation ?: strtolower(substr(strrchr(get_class($model), '\\'), 1)) . 's';
+
+        foreach ($this->entities as $entity) {
+            $entity->{$method}()->saveMany($collection);
+        }
+
+        return $this;
+    }
+
     protected function getKey($class)
     {
         $key = preg_replace('/(.*\b)(\w+)/', '$2', $class);
