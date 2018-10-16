@@ -30,7 +30,7 @@ class Factory
     protected function withBaseBuilder($builder, $data, $quantity)
     {
         if($this->isBaseBuilder($builder)) {
-            return $builder::create($data, $quantity)->entities();
+            return $builder::create($data, $quantity)->get();
         }
 
         return null;
