@@ -17,36 +17,34 @@ abstract class BaseBuilder
     protected $data = [];
 
     protected $belongsTo = [];
+    protected $hasMany = [];
 
     public function __construct(array $data = [])
     {
-        $this->factory = new Factory;
+        $this->class = $this->class ?: $this->getClassFromBuilder();
         $this->data = $data;
+        $this->factory = new Factory;
     }
 
-    public static function create(array $data = [], int $quantity = 1)
+    public static function create(array $data = [])
     {
         $instance = new static($data);
-
-        $instance->handleBelongsTo();
-
-        $class = $instance->getClassFromBuilder();
-        $instance->entities = $instance->factory->build($class, $instance->data, $quantity);
 
         return $instance;
     }
 
-    public function get()
+    public function get($quantity = 1)
     {
+        $this->handleBelongsTo();
+
+        $this->entities = $this->factory->build($this->class, $this->data, $quantity);
+
+        $this->handleHasMany();
+        
         return $this->entities->count() > 1
             ? $this->entities
             : $this->entities->first()
-            ;
-    }
-
-    public function entities()
-    {
-        return $this->entities;
+        ;
     }
 
     protected function build($class, $data, $quantity = 1)
@@ -79,25 +77,41 @@ abstract class BaseBuilder
 
     protected function associate(Model $model, $relation = null)
     {
-        $method = $relation ?: strtolower(substr(strrchr(get_class($model), '\\'), 1));
+        $key = $relation ?: strtolower(substr(strrchr(get_class($model), '\\'), 1)) . '_id';
 
-        foreach ($this->entities as $entity) {
-            $entity->{$method}()->associate($model)->save();
-        }
+        $this->data[$key] = $model->id;
 
         return $this;
     }
 
-    protected function addMany(Collection $collection, $relation = null)
+    protected function addMany($class, $related = 1, $relation = null)
     {
-        $model = $collection->first();
-        $method = $relation ?: strtolower(substr(strrchr(get_class($model), '\\'), 1)) . 's';
+        $relation = $relation ?: strtolower(substr(strrchr($this->class, '\\'), 1)) . '_id';
 
-        foreach ($this->entities as $entity) {
-            $entity->{$method}()->saveMany($collection);
-        }
+        $this->hasMany[$relation] = [$class => $related];
 
         return $this;
+    }
+
+    protected function handleHasMany()
+    {
+        foreach ($this->hasMany as $relation => $data) {
+            $collection = array_first($data);
+
+            foreach ($this->entities as $entity) {
+                if (is_int($collection)) {
+                    $class = array_first(array_keys($data));
+                    $builderName = $this->getBuilderNameFromClass($class);
+                    $builder = class_exists($builderName) ? $builderName : null;
+
+                    $this->factory->build($class, [$relation => $entity->id], $collection, $builder);
+                } else {
+                    foreach ($collection as $item) {
+                        $item->{$relation} = $entity->id;
+                    }
+                }
+            }
+        }
     }
 
     protected function getKey($class)
