@@ -2,6 +2,7 @@
 
 namespace Noogic\Builder;
 
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 
 class Factory
@@ -14,7 +15,10 @@ class Factory
             ?? factory($class, $quantity)->create($data)
         ;
 
-        return is_a($instances, Collection::class) ? $instances : new Collection([$instances]);
+        return is_a($instances, EloquentCollection::class)
+            ? new Collection($instances->all()) 
+            : new Collection([$instances])
+        ;
     }
 
 
@@ -30,7 +34,7 @@ class Factory
     protected function withBaseBuilder($builder, $data, $quantity)
     {
         if($this->isBaseBuilder($builder)) {
-            return $builder::create($data, $quantity)->get();
+            return $builder::create($data)->get($quantity);
         }
 
         return null;

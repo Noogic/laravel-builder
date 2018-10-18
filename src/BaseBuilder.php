@@ -17,10 +17,12 @@ abstract class BaseBuilder
     protected $data = [];
 
     protected $belongsTo = [];
+    protected $belongsToUnique = [];
     protected $hasMany = [];
 
     public function __construct(array $data = [])
     {
+        $this->entities = new Collection;
         $this->class = $this->class ?: $this->getClassFromBuilder();
         $this->data = $data;
         $this->factory = new Factory;
@@ -36,9 +38,13 @@ abstract class BaseBuilder
     public function get($quantity = 1)
     {
         $this->handleBelongsTo();
-
-        $this->entities = $this->factory->build($this->class, $this->data, $quantity);
-
+        
+        for($i = 0; $i < $quantity; $i++) {
+            $this->handleBelongsToUnique();
+            $entities = $this->factory->build($this->class, $this->data);
+            $this->entities = $this->entities->merge($entities);
+        }
+        
         $this->handleHasMany();
         
         return $this->entities->count() > 1
@@ -47,32 +53,33 @@ abstract class BaseBuilder
         ;
     }
 
-    protected function build($class, $data, $quantity = 1)
-    {
-        $defaultFactory = config('builder.factory');
-
-        if (is_callable($defaultFactory)) {
-            return $defaultFactory($class, $data, $quantity);
-        }
-
-        return factory($class)->create($data, $quantity);
-    }
-
     protected function handleBelongsTo()
     {
         foreach ($this->belongsTo as $index => $value) {
-            $class = is_int($index) ? $value : $index;
-            $key = is_int($index) ? $this->getKey($class) : $value;
-
-            if (isset($this->data[$key])) {
-                continue;
-            }
-
-            $builderName = $this->getBuilderNameFromClass($class);
-            $builder = class_exists($builderName) ? $builderName : null;
-
-            $this->data[$key] = $this->factory->build($class, [], 1, $builder)->first()->id;
+            $this->addBelongsToId($index, $value);
         }
+    }
+
+    protected function handleBelongsToUnique()
+    {
+        foreach ($this->belongsToUnique as $index => $value) {
+            $this->addBelongsToId($index, $value, true);
+        }      
+    }
+
+    protected function addBelongsToId($index, $value, $overrideExisting = false)
+    {
+        $class = is_int($index) ? $value : $index;
+        $key = is_int($index) ? $this->getKey($class) : $value;
+
+        if (! $overrideExisting and isset($this->data[$key])) {
+            return;
+        }
+
+        $builderName = $this->getBuilderNameFromClass($class);
+        $builder = class_exists($builderName) ? $builderName : null;
+
+        $this->data[$key] = $this->factory->build($class, [], 1, $builder)->first()->id;
     }
 
     protected function associate(Model $model, $relation = null)
@@ -104,10 +111,12 @@ abstract class BaseBuilder
                     $builderName = $this->getBuilderNameFromClass($class);
                     $builder = class_exists($builderName) ? $builderName : null;
 
-                    $this->factory->build($class, [$relation => $entity->id], $collection, $builder);
+                    $items = $this->factory->build($class, [$relation => $entity->id], $collection, $builder);
+                    $test = $items;
                 } else {
                     foreach ($collection as $item) {
                         $item->{$relation} = $entity->id;
+                        $item->save();
                     }
                 }
             }
