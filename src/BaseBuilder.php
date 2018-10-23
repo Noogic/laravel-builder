@@ -33,7 +33,7 @@ abstract class BaseBuilder
         return $instance;
     }
 
-    public function get($quantity = 1)
+    public function get(int $quantity = 1)
     {
         $this->handleBelongsTo();
 
